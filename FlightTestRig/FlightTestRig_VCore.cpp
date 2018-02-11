@@ -199,31 +199,32 @@ void FlightTestRig_VCore::setPos(double lat, double lon, double alt, double mach
 
   double pos_lng, pos_lat, pos_rad; 
   v->GetEquPos(pos_lng, pos_lat, pos_rad);
-  VECTOR3 llr{ pos_lat, pos_lng, pos_rad };
+  VECTOR3 my_llr{ pos_lat, pos_lng, pos_rad };
   
   VECTOR3 zz_llad = _V(-74.5, 40.6342, 0);
-  VECTOR3 zz_lla = cf.llad_to_lla(zz_llad);
-  VECTOR3 zz_llr = cf.lla_to_llr(zz_lla);
-  VECTOR3 chk_lla = cf.llr_to_lla(zz_llr);
-  VECTOR3 chk_llad = cf.lla_to_llad(chk_lla);
+  VECTOR3 zz_lla =   cf.cnv(LLA,  LLAD, zz_llad);
+  VECTOR3 zz_llr =   cf.cnv(LLR,  LLA,  zz_lla);
+  VECTOR3 chk_lla =  cf.cnv(LLA,  LLR,  zz_llr);
+  VECTOR3 chk_llad = cf.cnv(LLAD, LLA,  chk_lla);
+  chk_llad =         cf.cnv(LLAD, LLR,  zz_llr);
 
-  VECTOR3 zz_ecef = cf.llr_to_ecef(zz_llr);
-  chk_llad = cf.lla_to_llad(cf.llr_to_lla(cf.ecef_to_llr(zz_ecef)));
+  VECTOR3 zz_ecef =  cf.cnv(ECEF, LLR,  zz_llr);
+  chk_llad =         cf.cnv(LLA,  ECEF, zz_ecef);
 
-  VECTOR3 zz_rpos = cf.ecef_to_rpos(zz_ecef);
-  VECTOR3 chk_ecef = cf.rpos_to_ecef(zz_rpos);
+  VECTOR3 zz_rpos =  cf.cnv(RPOS, ECEF, zz_ecef);
+  VECTOR3 chk_ecef = cf.cnv(ECEF, RPOS, zz_rpos);
 
-  VECTOR3 tgt_ahdd = _V(90, 100, 0);
-  VECTOR3 tgt_ahd = cf.ahdd_to_ahd(tgt_ahdd);
-  VECTOR3 tgt_ned = cf.ahd_to_ned(tgt_ahd);
-  VECTOR3 tgt_ecef = cf.ned_to_ecef(zz_ecef, tgt_ned);
+  VECTOR3 tgt_ahdd = _V(135, 1000, 43);
+  VECTOR3 tgt_ahd =  cf.cnv(AHD,  AHDD, tgt_ahdd);
+  VECTOR3 tgt_ned =  cf.cnv(NED,  AHD,  tgt_ahd);
+  VECTOR3 tgt_ecef = cf.cnv(ECEF, NED,  tgt_ned, zz_ecef);
 
-  VECTOR3 chk_tgt_ned = cf.ecef_to_ned(zz_ecef, tgt_ecef);
-  VECTOR3 chk_tgt_ahd = cf.ned_to_ahd(chk_tgt_ned);
-  VECTOR3 chk_tgt_ahdd = cf.ahd_to_ahdd(chk_tgt_ahd);
+  VECTOR3 chk_tgt_ned = cf.cnv(NED, ECEF,  tgt_ecef, zz_ecef);
+  VECTOR3 chk_tgt_ahd = cf.cnv(AHD, NED,   chk_tgt_ned);
+  VECTOR3 chk_tgt_ahdd = cf.cnv(AHDD, AHD, chk_tgt_ahd);
 
 
-  ecef = cf.llr_to_ecef(_V(0 * RAD, 0 * RAD, 1000));
+  ecef = cf.cnv(ECEF, LLAD, _V(0, 0, 1000));
   oapiLocalToGlobal(ohE, &ecef, &gpos);
   oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
 

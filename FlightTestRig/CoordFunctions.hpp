@@ -28,13 +28,18 @@
 
 
 #include "orbitersdk.h"
+#include <limits>
 
 #ifndef _COORD_FUNCTIONS_H
 #define _COORD_FUNCTIONS_H
+enum cf_type {LLAD = 0, LLA = 1, LLR = 2, RPOS = 10, ECEF = 20, NED = 30, AHD = 31, AHDD = 32};
+
 class CoordFunctions {
 public:
   CoordFunctions(VESSEL *vin);
-  VECTOR3 rpos_to_ecef();
+  VECTOR3 cnv(const cf_type etype, const cf_type stype, const VECTOR3 &start, const VECTOR3 &ref = { DBL_MAX, DBL_MAX, DBL_MAX });
+
+private:
   VECTOR3 rpos_to_ecef(const VECTOR3 &rpos);
   VECTOR3 ecef_to_rpos(const VECTOR3 &ecef);
   VECTOR3 ecef_to_llr(const VECTOR3 &ecef);
@@ -44,14 +49,14 @@ public:
   VECTOR3 ned_to_ecef(const VECTOR3 &ecef_s, const VECTOR3 &ned);
   VECTOR3 ecef_to_ned(const VECTOR3 &ecef_s, const VECTOR3 &ecef_e);
   VECTOR3 ned_to_ahd(const VECTOR3 &ned);
-  VECTOR3 ahd_to_ned(const VECTOR3 &ahd); 
+  VECTOR3 ahd_to_ned(const VECTOR3 &ahd);
   VECTOR3 lla_to_llad(const VECTOR3 &lla);
   VECTOR3 ahd_to_ahdd(const VECTOR3 &ahd);
   VECTOR3 llad_to_lla(const VECTOR3 &llad);
   VECTOR3 ahdd_to_ahd(const VECTOR3 &ahdd);
-
-private:
   MATRIX3 ecef_to_mat(const VECTOR3 &ecef);
+  double to_rad(const double deg);
+  double to_deg(const double rad, const bool plusonly = false);
   VESSEL *v;
 };
 #endif // __COORD_FUNCTIONS_H

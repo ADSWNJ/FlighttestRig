@@ -13,6 +13,7 @@
 #define ORBITER2016        // Elevation model
 
 #include "CoordFunctions.hpp"
+#include <cstdarg>
 
 // Four coordinate systems are used...
 // "rpos" relative position to object, in global frame (ecliptic equinox J2000.0 frame)
@@ -35,15 +36,64 @@ CoordFunctions::CoordFunctions(VESSEL *vin)
   v = vin;
 }
 
+
 /*
- * \brief Gets vessel's current ECEF
- * \return earth-centered earth-fixed coordinates
- */
-VECTOR3 CoordFunctions::rpos_to_ecef() {
-  VECTOR3 rpos;
-  v->GetRelativePos(v->GetGravityRef(), rpos);
-  return rpos_to_ecef(rpos);
+* \brief General coordinate conversion from any to any of these types: llad, lla, llr, rpos, ecef, ned, ahd, ahdd
+* \param from_type  [enum]
+* \param to_type    [enum]
+* \param start      [VECTOR3] starting coordinate
+* \opt-param ref    [VECTOR3] reference coordinate for conversions between <= ecef and >= ned
+* \return coordinate in requersted format
+*/
+VECTOR3 CoordFunctions::cnv(const cf_type etype, const cf_type stype, const VECTOR3 &start, const VECTOR3 &ref) {
+
+  cf_type cur = stype;
+  VECTOR3 val = start;
+  while (cur != etype) {
+    switch (cur) {
+    case LLAD:
+        val = llad_to_lla(val);       cur = LLA;  break;
+    case LLA:
+      if (etype < cur) {
+        val = lla_to_llad(val);       cur = LLAD; break;
+      } else {
+        val = lla_to_llr(val);        cur = LLR;  break;
+      }
+    case LLR:
+      if (etype < cur) {
+        val = llr_to_lla(val);        cur = LLA; break;
+      } else {
+        val = llr_to_ecef(val);       cur = ECEF;  break;
+      }
+    case RPOS:
+        val = rpos_to_ecef(val);      cur = ECEF; break;
+    case ECEF:
+      if (etype == RPOS) {
+        val = ecef_to_rpos(val);      cur = RPOS; break;
+      } else if (etype < cur) {
+        val = ecef_to_llr(val);       cur = LLR;  break;
+      } else {
+        val = ecef_to_ned(ref, val);  cur = NED;  break;
+      }
+    case NED:
+      if (etype < cur) {
+        val = ned_to_ecef(ref, val);  cur = ECEF; break;
+      } else {
+        val = ned_to_ahd(val);        cur = AHD;  break;
+      }
+    case AHD:
+      if (etype < cur) {
+        val = ahd_to_ned(val);        cur = NED;  break;
+      } else {
+        val = ahd_to_ahdd(val);       cur = AHDD; break;
+      }
+    case AHDD:
+        val = ahdd_to_ahd(val);       cur = AHD;  break;
+    }
+  }
+  return val;
 }
+
 
 /*
  * \brief Converts RPOS to ECEF
@@ -101,15 +151,15 @@ VECTOR3 CoordFunctions::llr_to_ecef(const VECTOR3 &llr) {
  */
 VECTOR3 CoordFunctions::llr_to_lla(const VECTOR3 &llr) {
   OBJHANDLE hPlanet = v->GetGravityRef();
-  double surf_rad = oapiGetSize(hPlanet);
+  double surf_hgt = oapiGetSize(hPlanet);
   double alt;
 #ifdef ORBITER2016
   ELEVHANDLE eh = oapiElevationManager(hPlanet);
   if (eh) {
-    surf_rad += oapiSurfaceElevation(hPlanet, llr.x, llr.y);
+    surf_hgt += oapiSurfaceElevation(hPlanet, llr.x, llr.y);
   }
 #endif
-  alt = llr.z - surf_rad;
+  alt = llr.z - surf_hgt;
   VECTOR3 lla{ llr.x, llr.y, alt };
   return lla;
 }
@@ -121,14 +171,14 @@ VECTOR3 CoordFunctions::llr_to_lla(const VECTOR3 &llr) {
  */
 VECTOR3 CoordFunctions::lla_to_llr(const VECTOR3 &lla) {
   OBJHANDLE hPlanet = v->GetGravityRef();
-  double surf_rad = oapiGetSize(hPlanet);
+  double surf_hgt = oapiGetSize(hPlanet);
 #ifdef ORBITER2016
   ELEVHANDLE eh = oapiElevationManager(hPlanet);
   if (eh) {
-    surf_rad += oapiSurfaceElevation(hPlanet, lla.x, lla.y);
+    surf_hgt += oapiSurfaceElevation(hPlanet, lla.x, lla.y);
   }
 #endif
-  VECTOR3 llr{lla.x, lla.y, lla.z + surf_rad};
+  VECTOR3 llr{lla.x, lla.y, lla.z + surf_hgt};
   return llr;
 }
 
@@ -208,7 +258,7 @@ VECTOR3 CoordFunctions::ahd_to_ned(const VECTOR3 &ahd) {
  * \return lon [deg], lat [deg], altitude [m]
  */
 VECTOR3 CoordFunctions::lla_to_llad(const VECTOR3 &lla) {
-  VECTOR3 llad{ lla.x*DEG, lla.y*DEG, lla.z };
+  VECTOR3 llad{ to_deg(lla.x), to_deg(lla.y), lla.z };
   return llad;
 }
 
@@ -218,7 +268,7 @@ VECTOR3 CoordFunctions::lla_to_llad(const VECTOR3 &lla) {
  * \return Azimuth [deg] Horizontal [m] Down [m] to target
  */
 VECTOR3 CoordFunctions::ahd_to_ahdd(const VECTOR3 &ahd) {
-  VECTOR3 ahdd{ ahd.x*DEG, ahd.y, ahd.z };
+  VECTOR3 ahdd{ to_deg(ahd.x, true), ahd.y, ahd.z };
   return ahdd;
 }
 
@@ -228,7 +278,7 @@ VECTOR3 CoordFunctions::ahd_to_ahdd(const VECTOR3 &ahd) {
  * \return lon [rad], lat [rad], altitude [m]
  */
 VECTOR3 CoordFunctions::llad_to_lla(const VECTOR3 &llad) {
-  VECTOR3 lla{ llad.x*RAD, llad.y*RAD, llad.z };
+  VECTOR3 lla{ to_rad(llad.x), to_rad(llad.y), llad.z };
   return lla;
 }
 
@@ -238,6 +288,37 @@ VECTOR3 CoordFunctions::llad_to_lla(const VECTOR3 &llad) {
  * \return Azimuth [rad] Horizontal [m] Down [m] to target
  */
 VECTOR3 CoordFunctions::ahdd_to_ahd(const VECTOR3 &ahdd) {
-  VECTOR3 ahd{ ahdd.x*RAD, ahdd.y, ahdd.z };
+  VECTOR3 ahd{ to_rad(ahdd.x), ahdd.y, ahdd.z };
   return ahd;
 }
+
+/*
+ * \brief Converts degrees to radians
+ * \param deg  degree angle (any value)
+ * \return radians angle in range >-PI to <=+PI
+ */
+double CoordFunctions::to_rad(const double d) {
+  double a = d;
+  while (a > 180.0) a -= 360.0;
+  while (a <= -180.0) a += 360.0;
+  return a * RAD;
+}
+
+/*
+ * \brief Converts radians to degrees
+ * \param rad  radian angle (any value)
+ * \return degrees angle in range >= 0.0 to <360.0
+ */
+double CoordFunctions::to_deg(const double r, const bool plusonly) {
+  double a = r * DEG;
+  if (plusonly) {
+    while (a >= 360.0) a -= 360.0;
+    while (a < 0.0) a += 360.0;
+  } else {
+    while (a > 180.0) a -= 360.0;
+    while (a <= -180.0) a += 360.0;
+  }
+  return a;
+}
+
+
