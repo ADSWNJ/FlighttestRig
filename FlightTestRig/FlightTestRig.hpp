@@ -11,8 +11,8 @@
 // ==============================================================
 
 
-#ifndef __SCRAM_ATT_H
-#define __SCRAM_ATT_H
+#ifndef __FLIGHTTESTRIG_H
+#define __FLIGHTTESTRIG_H
 
 #include "FlightTestRig_GCore.hpp"   
 #include "FlightTestRig_VCore.hpp" 
@@ -35,19 +35,8 @@ public:
   bool DisplayMessageMode();
 
   // Button Press Handlers
-  void Button_AP();
-  void Button_DN();
-  void Button_UP();
-  void Button_LOG();
-  void Button_A0();
-  void Button_A1U();
-  void Button_A1D();
-  void Button_A2U();
-  void Button_A2D();
-  void Button_APA();
-  void Button_REA();
-  void Button_NUL();
-  void Button_DIA();
+  void Button_POS();
+
 
   // Persistence functions
   void ReadStatus(FILEHANDLE scn);
@@ -80,4 +69,4 @@ protected:
 
 };
 
-#endif // !__SCRAM_ATT_H
+#endif // !__FLIGHTTESTRIG_H

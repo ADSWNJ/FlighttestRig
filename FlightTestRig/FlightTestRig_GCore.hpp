@@ -18,8 +18,8 @@
 #include "MFDPersist.hpp"
 using namespace std;
 
-#ifndef _SCRAM_ATT_GCORE_H
-#define _SCRAM_ATT_GCORE_H
+#ifndef _FLIGHTTESTRIG_GCORE_H
+#define _FLIGHTTESTRIG_GCORE_H
 
 
 //+++++
@@ -42,4 +42,4 @@ class FlightTestRig_GCore {
 };
 
 
-#endif // _SCRAM_ATT_GCORE_H
+#endif // _FLIGHTTESTRIG_GCORE_H

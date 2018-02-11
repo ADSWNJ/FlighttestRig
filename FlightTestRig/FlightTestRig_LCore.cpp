@@ -18,6 +18,6 @@ FlightTestRig_LCore::FlightTestRig_LCore(VESSEL *vin, UINT mfdin, FlightTestRig_
   GC = gcin;
   v = vin;
   m = mfdin;
-  VC = (FlightTestRig_VCore*) GC->P.findVC(v);
+  VC = (FlightTestRig_VCore*)GC->P.findVC(v);
   return;
 }

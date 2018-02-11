@@ -21,8 +21,8 @@
 
 using namespace std;
 
-#ifndef _SCRAM_ATT_LCORE_H
-#define _SCRAM_ATT_LCORE_H
+#ifndef _FLIGHTTESTRIG_LCORE_H
+#define _FLIGHTTESTRIG_LCORE_H
 
 //+++++
 // Local Persistence core. One of these is instantiated per Vessel AND MFD panel location. Local defaults for that combination.
@@ -56,4 +56,4 @@ class FlightTestRig_LCore {
 };
 
 
-#endif // _SCRAM_ATT_CORE_CLASSES
+#endif // _FLIGHTTESTRIG_CORE_CLASSES

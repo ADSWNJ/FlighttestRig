@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CoordFunctions.hpp" />
     <ClInclude Include="DisplayEngUnitFunctions.h" />
     <ClInclude Include="FlightTestRig.hpp" />
     <ClInclude Include="FlightTestRig_Buttons.hpp" />
@@ -23,6 +24,7 @@
     <ClInclude Include="ParseFunctions.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CoordFunctions.cpp" />
     <ClCompile Include="DisplayEngUnitFunctions.cpp" />
     <ClCompile Include="FlightTestRig.cpp" />
     <ClCompile Include="FlightTestRig_ButtonHandling.cpp" />

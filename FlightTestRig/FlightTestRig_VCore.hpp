@@ -10,18 +10,19 @@
 //
 // ==============================================================
 
+#include <list>
+#include <string>
+#include <vector>
 #include "windows.h"
 #include "orbitersdk.h"
 #include "FlightTestRig_Buttons.hpp"
 #include "MFDPersist.hpp"
 #include "FlightTestRig_GCore.hpp"
-#include <list>
-#include <string>
-#include <vector>
+#include "CoordFunctions.hpp"
 using namespace std;
 
-#ifndef _SCRAM_ATT_VCORE_H
-#define _SCRAM_ATT_VCORE_H
+#ifndef _FLIGHTTESTRIG_VCORE_H
+#define _FLIGHTTESTRIG_VCORE_H
 
 //+++++
 // Vessel Persistence core. One of these is instantiated per Vessel flown with this MFD up.
@@ -41,6 +42,12 @@ class FlightTestRig_VCore {
     VESSEL *v;
     int vix; // Vessel index in LU
     char clName[128];
+
+    // Vessel Coordinate transforms
+    CoordFunctions cf; 
+
+    // Vessel Position and Velocity
+    void setPos(double lat, double lon, double alt, double mach, double azimuth);
 
     // Logging Control
     void dumpMW();
@@ -210,7 +217,7 @@ class FlightTestRig_VCore {
 };
 
 
-#endif // _SCRAM_ATT_VCORE_H
+#endif // _FLIGHTTESTRIG_VCORE_H
 
 
 

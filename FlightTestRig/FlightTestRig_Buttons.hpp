@@ -12,8 +12,8 @@
 
 
 
-#ifndef _SCRAM_ATT_BUTTON_CLASS
-#define _SCRAM_ATT_BUTTON_CLASS
+#ifndef _FLIGHTTESTRIG_BUTTON_CLASS
+#define _FLIGHTTESTRIG_BUTTON_CLASS
 #include "MFDButtonPage.hpp"
 
 class FlightTestRig;
@@ -26,5 +26,5 @@ class FlightTestRig_Buttons : public MFDButtonPage<FlightTestRig>
     bool SearchForKeysInOtherPages() const;
   private:
 };
-#endif // _SCRAM_ATT_BUTTON_CLASS
+#endif // _FLIGHTTESTRIG_BUTTON_CLASS
 

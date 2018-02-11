@@ -10,15 +10,16 @@
 //
 // ==============================================================
 
-#include "FlightTestRig_GCore.hpp"
-#include "FlightTestRig_VCore.hpp"
-#include "ParseFunctions.h"
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
 #include <assert.h>
+#include "FlightTestRig_GCore.hpp"
+#include "FlightTestRig_VCore.hpp"
+#include "ParseFunctions.h"
 
-FlightTestRig_VCore::FlightTestRig_VCore(VESSEL *vin, FlightTestRig_GCore* gcin) {
+
+FlightTestRig_VCore::FlightTestRig_VCore(VESSEL *vin, FlightTestRig_GCore* gcin) : cf(vin) {
 	// Vessel core constructor
   GC = gcin;
 	v = vin;
@@ -160,6 +161,117 @@ void FlightTestRig_VCore::corePreStep(double p_simT,double p_simDT,double p_mjd)
 
   return;
 }
+
+void FlightTestRig_VCore::setPos(double lat, double lon, double alt, double mach, double azimuth)
+{
+  VESSELSTATUS2 vs2; 
+  vs2.version = 2;
+  vs2.flag = 0;
+  v->GetStatusEx(&vs2);
+
+  OBJHANDLE ohE = oapiGetObjectByName("Earth");
+
+  VECTOR3 gEpos;
+  oapiGetGlobalPos(ohE, &gEpos); 
+
+  VECTOR3 gpos, lpos;
+  oapiLocalToGlobal(ohE, &_V(0, 0, 0), &gpos);
+  oapiGlobalToLocal(ohE, &gpos, &lpos);
+
+  oapiLocalToGlobal(ohE, &_V(0, 0, 0), &gpos);
+  oapiGlobalToLocal(ohE, &gpos, &lpos);
+
+  VECTOR3 ecef, chk_xyz;
+
+  VECTOR3 rpos;
+  v->GetRelativePos(vs2.rbody, rpos);
+
+  MATRIX3 M_rpos_to_xyz;
+  oapiGetRotationMatrix(vs2.rbody, &M_rpos_to_xyz);
+
+  chk_xyz = tmul(M_rpos_to_xyz, rpos);
+
+
+  VECTOR3 gVpos = gEpos + rpos; 
+  VECTOR3 lVpos; 
+  oapiGlobalToLocal(ohE, &gVpos, &lVpos); 
+
+
+  double pos_lng, pos_lat, pos_rad; 
+  v->GetEquPos(pos_lng, pos_lat, pos_rad);
+  VECTOR3 llr{ pos_lat, pos_lng, pos_rad };
+  
+  VECTOR3 zz_llad = _V(-74.5, 40.6342, 0);
+  VECTOR3 zz_lla = cf.llad_to_lla(zz_llad);
+  VECTOR3 zz_llr = cf.lla_to_llr(zz_lla);
+  VECTOR3 chk_lla = cf.llr_to_lla(zz_llr);
+  VECTOR3 chk_llad = cf.lla_to_llad(chk_lla);
+
+  VECTOR3 zz_ecef = cf.llr_to_ecef(zz_llr);
+  chk_llad = cf.lla_to_llad(cf.llr_to_lla(cf.ecef_to_llr(zz_ecef)));
+
+  VECTOR3 zz_rpos = cf.ecef_to_rpos(zz_ecef);
+  VECTOR3 chk_ecef = cf.rpos_to_ecef(zz_rpos);
+
+  VECTOR3 tgt_ahdd = _V(90, 100, 0);
+  VECTOR3 tgt_ahd = cf.ahdd_to_ahd(tgt_ahdd);
+  VECTOR3 tgt_ned = cf.ahd_to_ned(tgt_ahd);
+  VECTOR3 tgt_ecef = cf.ned_to_ecef(zz_ecef, tgt_ned);
+
+  VECTOR3 chk_tgt_ned = cf.ecef_to_ned(zz_ecef, tgt_ecef);
+  VECTOR3 chk_tgt_ahd = cf.ned_to_ahd(chk_tgt_ned);
+  VECTOR3 chk_tgt_ahdd = cf.ahd_to_ahdd(chk_tgt_ahd);
+
+
+  ecef = cf.llr_to_ecef(_V(0 * RAD, 0 * RAD, 1000));
+  oapiLocalToGlobal(ohE, &ecef, &gpos);
+  oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
+
+/*  xyz = llr_to_xyz(_V( 90 * RAD,  0 * RAD, 1000));
+  oapiLocalToGlobal(ohE, &xyz, &gpos);
+  oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
+
+  xyz = llr_to_xyz(_V(  0 * RAD, 90 * RAD, 1000));
+  oapiLocalToGlobal(ohE, &xyz, &gpos);
+  oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
+
+  xyz = llr_to_xyz(_V(-90 * RAD,  0 * RAD, 1000));
+  oapiLocalToGlobal(ohE, &xyz, &gpos);
+  oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
+
+  xyz = llr_to_xyz(_V(-90 * RAD, 90 * RAD, 1000));
+  oapiLocalToGlobal(ohE, &xyz, &gpos);
+  oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
+
+  xyz = llr_to_xyz(_V(  0 * RAD, 30 * RAD, 1000));
+  oapiLocalToGlobal(ohE, &xyz, &gpos);
+  oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
+
+  xyz = llr_to_xyz(_V( 30 * RAD,  0 * RAD, 1000));
+  oapiLocalToGlobal(ohE, &xyz, &gpos);
+  oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
+
+  ecef = cf.llr_to_ecef(llr);
+  oapiLocalToGlobal(ohE, &ecef, &gpos);
+  oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
+
+
+  ecef = cf.llr_to_ecef(llr);
+  */
+
+/*  double pos_lng_deg = pos_lng * DEG;
+  double pos_lat_deg = pos_lat * DEG;
+
+  VECTOR3 nre;
+  nre = ar_to_nre(_AR(0.0, 1000.0), 6371000.0);
+  nre = ar_to_nre(_AR(0.0, 6371000.0 * PI * 0.5), 6371000.0);
+  nre = ar_to_nre(_AR(0.0, 6371000.0 * PI * 1.0), 6371000.0);
+  nre = ar_to_nre(_AR(0.0, 6371000.0 * PI * 1.5), 6371000.0);
+  nre = ar_to_nre(_AR(0.0, 6371000.0 * PI * 2.0), 6371000.0);
+*/
+  return;
+}
+
 
 void FlightTestRig_VCore::dumpMW() {
   FILE *hFile = nullptr;
