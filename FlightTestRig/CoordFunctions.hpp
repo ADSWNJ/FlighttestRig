@@ -37,7 +37,7 @@ enum cf_type {LLAD = 0, LLA = 1, LLR = 2, RPOS = 10, ECEF = 20, NED = 30, AHD = 
 class CoordFunctions {
 public:
   CoordFunctions(VESSEL *vin);
-  VECTOR3 cnv(const cf_type etype, const cf_type stype, const VECTOR3 &start, const VECTOR3 &ref = { DBL_MAX, DBL_MAX, DBL_MAX });
+  VECTOR3 cnv(const cf_type etype, const cf_type stype, ...);
 
 private:
   VECTOR3 rpos_to_ecef(const VECTOR3 &rpos);

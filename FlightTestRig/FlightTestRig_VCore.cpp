@@ -14,6 +14,7 @@
 #include <math.h>
 #include <string.h>
 #include <assert.h>
+#include <stdarg.h>
 #include "FlightTestRig_GCore.hpp"
 #include "FlightTestRig_VCore.hpp"
 #include "ParseFunctions.h"
@@ -162,6 +163,7 @@ void FlightTestRig_VCore::corePreStep(double p_simT,double p_simDT,double p_mjd)
   return;
 }
 
+
 void FlightTestRig_VCore::setPos(double lat, double lon, double alt, double mach, double azimuth)
 {
   VESSELSTATUS2 vs2; 
@@ -169,107 +171,17 @@ void FlightTestRig_VCore::setPos(double lat, double lon, double alt, double mach
   vs2.flag = 0;
   v->GetStatusEx(&vs2);
 
-  OBJHANDLE ohE = oapiGetObjectByName("Earth");
-
-  VECTOR3 gEpos;
-  oapiGetGlobalPos(ohE, &gEpos); 
-
-  VECTOR3 gpos, lpos;
-  oapiLocalToGlobal(ohE, &_V(0, 0, 0), &gpos);
-  oapiGlobalToLocal(ohE, &gpos, &lpos);
-
-  oapiLocalToGlobal(ohE, &_V(0, 0, 0), &gpos);
-  oapiGlobalToLocal(ohE, &gpos, &lpos);
-
-  VECTOR3 ecef, chk_xyz;
-
-  VECTOR3 rpos;
-  v->GetRelativePos(vs2.rbody, rpos);
-
-  MATRIX3 M_rpos_to_xyz;
-  oapiGetRotationMatrix(vs2.rbody, &M_rpos_to_xyz);
-
-  chk_xyz = tmul(M_rpos_to_xyz, rpos);
+  CONST VECTOR3 desired_llad = _V(-74.5, 40.6342, 60000); // KSC @ 60km
+  CONST VECTOR3 desired_ahdd = _V(90, 2000, 0);      // Bearing 135, 3000 m/s, level horizon
 
 
-  VECTOR3 gVpos = gEpos + rpos; 
-  VECTOR3 lVpos; 
-  oapiGlobalToLocal(ohE, &gVpos, &lVpos); 
+  VECTOR3 desired_rpos = cf.cnv(RPOS, LLAD, desired_llad);
+  VECTOR3 desired_rvel = cf.cnv(RPOS, AHDD, desired_ahdd, RPOS, desired_rpos) - desired_rpos;
 
-
-  double pos_lng, pos_lat, pos_rad; 
-  v->GetEquPos(pos_lng, pos_lat, pos_rad);
-  VECTOR3 my_llr{ pos_lat, pos_lng, pos_rad };
-  
-  VECTOR3 zz_llad = _V(-74.5, 40.6342, 0);
-  VECTOR3 zz_lla =   cf.cnv(LLA,  LLAD, zz_llad);
-  VECTOR3 zz_llr =   cf.cnv(LLR,  LLA,  zz_lla);
-  VECTOR3 chk_lla =  cf.cnv(LLA,  LLR,  zz_llr);
-  VECTOR3 chk_llad = cf.cnv(LLAD, LLA,  chk_lla);
-  chk_llad =         cf.cnv(LLAD, LLR,  zz_llr);
-
-  VECTOR3 zz_ecef =  cf.cnv(ECEF, LLR,  zz_llr);
-  chk_llad =         cf.cnv(LLA,  ECEF, zz_ecef);
-
-  VECTOR3 zz_rpos =  cf.cnv(RPOS, ECEF, zz_ecef);
-  VECTOR3 chk_ecef = cf.cnv(ECEF, RPOS, zz_rpos);
-
-  VECTOR3 tgt_ahdd = _V(135, 1000, 43);
-  VECTOR3 tgt_ahd =  cf.cnv(AHD,  AHDD, tgt_ahdd);
-  VECTOR3 tgt_ned =  cf.cnv(NED,  AHD,  tgt_ahd);
-  VECTOR3 tgt_ecef = cf.cnv(ECEF, NED,  tgt_ned, zz_ecef);
-
-  VECTOR3 chk_tgt_ned = cf.cnv(NED, ECEF,  tgt_ecef, zz_ecef);
-  VECTOR3 chk_tgt_ahd = cf.cnv(AHD, NED,   chk_tgt_ned);
-  VECTOR3 chk_tgt_ahdd = cf.cnv(AHDD, AHD, chk_tgt_ahd);
-
-
-  ecef = cf.cnv(ECEF, LLAD, _V(0, 0, 1000));
-  oapiLocalToGlobal(ohE, &ecef, &gpos);
-  oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
-
-/*  xyz = llr_to_xyz(_V( 90 * RAD,  0 * RAD, 1000));
-  oapiLocalToGlobal(ohE, &xyz, &gpos);
-  oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
-
-  xyz = llr_to_xyz(_V(  0 * RAD, 90 * RAD, 1000));
-  oapiLocalToGlobal(ohE, &xyz, &gpos);
-  oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
-
-  xyz = llr_to_xyz(_V(-90 * RAD,  0 * RAD, 1000));
-  oapiLocalToGlobal(ohE, &xyz, &gpos);
-  oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
-
-  xyz = llr_to_xyz(_V(-90 * RAD, 90 * RAD, 1000));
-  oapiLocalToGlobal(ohE, &xyz, &gpos);
-  oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
-
-  xyz = llr_to_xyz(_V(  0 * RAD, 30 * RAD, 1000));
-  oapiLocalToGlobal(ohE, &xyz, &gpos);
-  oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
-
-  xyz = llr_to_xyz(_V( 30 * RAD,  0 * RAD, 1000));
-  oapiLocalToGlobal(ohE, &xyz, &gpos);
-  oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
-
-  ecef = cf.llr_to_ecef(llr);
-  oapiLocalToGlobal(ohE, &ecef, &gpos);
-  oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
-
-
-  ecef = cf.llr_to_ecef(llr);
-  */
-
-/*  double pos_lng_deg = pos_lng * DEG;
-  double pos_lat_deg = pos_lat * DEG;
-
-  VECTOR3 nre;
-  nre = ar_to_nre(_AR(0.0, 1000.0), 6371000.0);
-  nre = ar_to_nre(_AR(0.0, 6371000.0 * PI * 0.5), 6371000.0);
-  nre = ar_to_nre(_AR(0.0, 6371000.0 * PI * 1.0), 6371000.0);
-  nre = ar_to_nre(_AR(0.0, 6371000.0 * PI * 1.5), 6371000.0);
-  nre = ar_to_nre(_AR(0.0, 6371000.0 * PI * 2.0), 6371000.0);
-*/
+  vs2.rpos = desired_rpos;
+  vs2.rvel = desired_rvel;
+  vs2.vrot = _V(0.0, 0.0, 0.0);
+  v->DefSetStateEx(&vs2);
   return;
 }
 
@@ -593,3 +505,96 @@ bool FlightTestRig_VCore::GetVesselClassControlSettings() {
   }
   return parseValid;
 }
+
+
+/*  OBJHANDLE ohE = oapiGetObjectByName("Earth");
+
+VECTOR3 gEpos;
+oapiGetGlobalPos(ohE, &gEpos);
+
+VECTOR3 gpos, lpos;
+oapiLocalToGlobal(ohE, &_V(0, 0, 0), &gpos);
+oapiGlobalToLocal(ohE, &gpos, &lpos);
+
+oapiLocalToGlobal(ohE, &_V(0, 0, 0), &gpos);
+oapiGlobalToLocal(ohE, &gpos, &lpos);
+
+VECTOR3 ecef, chk_xyz;
+
+VECTOR3 rpos;
+v->GetRelativePos(vs2.rbody, rpos);
+
+MATRIX3 M_rpos_to_xyz;
+oapiGetRotationMatrix(vs2.rbody, &M_rpos_to_xyz);
+
+chk_xyz = tmul(M_rpos_to_xyz, rpos);
+
+
+VECTOR3 gVpos = gEpos + rpos;
+VECTOR3 lVpos;
+oapiGlobalToLocal(ohE, &gVpos, &lVpos);
+
+
+double pos_lng, pos_lat, pos_rad;
+v->GetEquPos(pos_lng, pos_lat, pos_rad);
+VECTOR3 my_llr{ pos_lat, pos_lng, pos_rad };
+
+
+VECTOR3 zz_llad = _V(-74.5, 40.6342, 0);
+VECTOR3 zz_lla =   cf.cnv(LLA,  LLAD, zz_llad);
+VECTOR3 zz_llr =   cf.cnv(LLR,  LLA,  zz_lla);
+VECTOR3 chk_lla =  cf.cnv(LLA,  LLR,  zz_llr);
+VECTOR3 chk_llad = cf.cnv(LLAD, LLA,  chk_lla);
+chk_llad =         cf.cnv(LLAD, LLR,  zz_llr);
+
+VECTOR3 zz_ecef =  cf.cnv(ECEF, LLR,  zz_llr);
+chk_llad =         cf.cnv(LLAD,  ECEF, zz_ecef);
+
+VECTOR3 zz_rpos =  cf.cnv(RPOS, ECEF, zz_ecef);
+VECTOR3 chk_ecef = cf.cnv(ECEF, RPOS, zz_rpos);
+
+VECTOR3 tgt_ahdd = _V(135, 1000, 43);
+VECTOR3 tgt_ahd =  cf.cnv(AHD,  AHDD, tgt_ahdd);
+VECTOR3 tgt_ned =  cf.cnv(NED,  AHD,  tgt_ahd);
+VECTOR3 tgt_ecef = cf.cnv(ECEF, NED,  tgt_ned, zz_ecef);
+
+VECTOR3 chk_tgt_ned = cf.cnv(NED, ECEF,  tgt_ecef, zz_ecef);
+VECTOR3 chk_tgt_ahd = cf.cnv(AHD, NED,   chk_tgt_ned);
+VECTOR3 chk_tgt_ahdd = cf.cnv(AHDD, AHD, chk_tgt_ahd);
+
+
+ecef = cf.cnv(ECEF, LLAD, _V(0, 0, 1000));
+oapiLocalToGlobal(ohE, &ecef, &gpos);
+oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
+
+/*  xyz = llr_to_xyz(_V( 90 * RAD,  0 * RAD, 1000));
+oapiLocalToGlobal(ohE, &xyz, &gpos);
+oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
+
+xyz = llr_to_xyz(_V(  0 * RAD, 90 * RAD, 1000));
+oapiLocalToGlobal(ohE, &xyz, &gpos);
+oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
+
+xyz = llr_to_xyz(_V(-90 * RAD,  0 * RAD, 1000));
+oapiLocalToGlobal(ohE, &xyz, &gpos);
+oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
+
+xyz = llr_to_xyz(_V(-90 * RAD, 90 * RAD, 1000));
+oapiLocalToGlobal(ohE, &xyz, &gpos);
+oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
+
+xyz = llr_to_xyz(_V(  0 * RAD, 30 * RAD, 1000));
+oapiLocalToGlobal(ohE, &xyz, &gpos);
+oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
+
+xyz = llr_to_xyz(_V( 30 * RAD,  0 * RAD, 1000));
+oapiLocalToGlobal(ohE, &xyz, &gpos);
+oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
+
+ecef = cf.llr_to_ecef(llr);
+oapiLocalToGlobal(ohE, &ecef, &gpos);
+oapiGlobalToLocal(ohE, &gpos, &chk_xyz);
+
+
+ecef = cf.llr_to_ecef(llr);
+*/

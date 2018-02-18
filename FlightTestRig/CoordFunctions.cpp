@@ -15,20 +15,26 @@
 #include "CoordFunctions.hpp"
 #include <cstdarg>
 
-// Four coordinate systems are used...
+// Five coordinate systems are used...
+// "llad" means longitude [deg], latitude [deg], altitude [m]... defining our 3D point relative to the planet core as a function of lon and lat angles and the local altitude from the elevation functions
+// "lla" means longitude [rad], latitude [rad], altitude [m] ... defining our 3D point relative to the planet core as a function of lon and lat angles and the local altitude from the elevation functions
+// "llr" means longitude [rad], latitude [rad], radius [m] ... defining our 3D point relative to the planet core as a function of lon and lat angles and a radius from core
 // "rpos" relative position to object, in global frame (ecliptic equinox J2000.0 frame)
-// "llr" means longitude, latitude, radius ... defining our 3D point relative to the planet core as a function of lon and lat angles and a radius from core
-// "lla" means longitude, latitude, altitude ... defining our 3D point relative to the planet core as a function of lon and lat angles and the local altitude from the elevation functions
-// "ecef" means ECEF Cartesian coordinates from the core (X-axis is core to 0-lat 0-lon, Y-axis is core to 0-lat 90E-lon, Z-axis is North Pole 90N)
+// "ecef" means ECEF Cartesian coordinates [m] from the core (X-axis is core to 0-lat 0-lon, Y-axis is core to 0-lat 90E-lon, Z-axis is North Pole 90N)
 //
-// Conversion track is RPOS to ECEF to LLR to LLA and back.
+// Three relative vector systems are used...
+// "ned" means north, east, down [m] ... i.e. on a flattened out map, this distance north, this distance east, this distance down (simplified spherical model, good for say 200km x 200km)
+// "ahd" means azimuth [rad], horizontal-offset [m], down-offset range [m] ... i.e. this bearing for this horizontal distance, and this vertical down disatance
+// "ahdd" means azimuth [deg], horizontal-offset [m], down-offset range [m] ... i.e. this bearing for this horizontal distance, and this vertical down disatance
 //
-// Two vector systems are used...
-// "arr" means azimuth, and range, radius ... i.e. this bearing for this distance, at this radius from the core of the planet
-// "ned" means north, east, down ... i.e. on a flattened out map, this distance north, this distance east, this distance down (simplified spherical model, good for say 200km x 200km)
-//
-// Conversion track is ARR to NED and back.
-// Target to ARR and back is: src LLR + tgt LLR to ARR, and src LLR + ARR to target LLR
+// Conversion paths are as follows:
+// LLAD <> LLA <> LLR <> ECEF 
+// RPOS <> ECEF
+// ECEF tgt + ECEF ref -> NED
+// NED + ECEF ref -> ECEF tgt
+// NED <> AHD <> AHDD
+// 
+// The cnv function automatically does intermediate transforms to deliver any to any conversions. Just remember to give it a reference v
 // 
 
 CoordFunctions::CoordFunctions(VESSEL *vin)
@@ -39,13 +45,18 @@ CoordFunctions::CoordFunctions(VESSEL *vin)
 
 /*
 * \brief General coordinate conversion from any to any of these types: llad, lla, llr, rpos, ecef, ned, ahd, ahdd
-* \param from_type  [enum]
-* \param to_type    [enum]
-* \param start      [VECTOR3] starting coordinate
-* \opt-param ref    [VECTOR3] reference coordinate for conversions between <= ecef and >= ned
-* \return coordinate in requersted format
+* \param to_type     [enum] Desired target coordinate type
+* \param from_type   [enum] Starting coordinate type
+* \param start       [VECTOR3] Starting coordinate
+* \opt-param reftype [enum] Reference coordinate type for ECEF<>NED conversions. Must be <= ECEF (i.e. not NED, AHD, AHDD)
+* \opt-param ref     [VECTOR3] Reference coordinate for conversions between <= ecef and >= ned
+* \return coordinate in requested format
 */
-VECTOR3 CoordFunctions::cnv(const cf_type etype, const cf_type stype, const VECTOR3 &start, const VECTOR3 &ref) {
+VECTOR3 CoordFunctions::cnv(const cf_type etype, const cf_type stype, ...) {
+
+  va_list vl;
+  va_start(vl, stype);
+  const VECTOR3 start = va_arg(vl, const VECTOR3);
 
   cf_type cur = stype;
   VECTOR3 val = start;
@@ -73,11 +84,19 @@ VECTOR3 CoordFunctions::cnv(const cf_type etype, const cf_type stype, const VECT
       } else if (etype < cur) {
         val = ecef_to_llr(val);       cur = LLR;  break;
       } else {
-        val = ecef_to_ned(ref, val);  cur = NED;  break;
+        const cf_type ref_type = va_arg(vl, const cf_type);
+        if (ref_type > ECEF) throw("Error in cnv: relative coord type not permitted here");
+        const VECTOR3 ref = va_arg(vl, const VECTOR3);
+        const VECTOR3 ref_ecef = this->cnv(ECEF, ref_type, ref);
+        val = ecef_to_ned(ref_ecef, val);  cur = NED;  break;
       }
     case NED:
       if (etype < cur) {
-        val = ned_to_ecef(ref, val);  cur = ECEF; break;
+        const cf_type ref_type = va_arg(vl, const cf_type);
+        if (ref_type > ECEF) throw("Error in cnv: relative coord type not permitted here");
+        const VECTOR3 ref = va_arg(vl, const VECTOR3);
+        const VECTOR3 ref_ecef = this->cnv(ECEF, ref_type, ref);
+        val = ned_to_ecef(ref_ecef, val);  cur = ECEF; break;
       } else {
         val = ned_to_ahd(val);        cur = AHD;  break;
       }
@@ -91,6 +110,7 @@ VECTOR3 CoordFunctions::cnv(const cf_type etype, const cf_type stype, const VECT
         val = ahdd_to_ahd(val);       cur = AHD;  break;
     }
   }
+  va_end(vl);
   return val;
 }
 
