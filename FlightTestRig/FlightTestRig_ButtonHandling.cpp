@@ -43,9 +43,23 @@ bool FlightTestRig::ConsumeKeyBuffered (DWORD key) {
 // MFD Button Handler Callbacks
 //
 
-// AP = AutoPilot On/Off
+// POS = Set Position
 void FlightTestRig::Button_POS() {
   VC->setPos(0, 0, 30000, 15, 0);
   return;
 };
 
+// HLD = toggle POS hold
+void FlightTestRig::Button_HLD() {
+  VC->holdPos = !VC->holdPos;
+  VC->holdPosCnt++;
+  return;
+};
+
+// ROT
+void FlightTestRig::Button_ROT() {
+  // manual edit in ArotD
+  VC->ArotD = _V(0, 0, 0);
+  VC->ArotR = VC->ArotD * RAD;
+  return;
+};

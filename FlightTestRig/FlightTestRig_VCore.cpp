@@ -50,6 +50,11 @@ FlightTestRig_VCore::FlightTestRig_VCore(VESSEL *vin, FlightTestRig_GCore* gcin)
   histIx = 0;
   histOld = 1;
   histMid = (reqHist + 1) / 2 ;
+
+  desired_llad = _V(-80.6489808, 28.5728722, 60000); // KSC @ 60km
+  desired_ahdd = _V(45, 2000, 100);
+  holdPos = false;
+  holdPosCnt = 0;
   return;
 };
 
@@ -59,6 +64,9 @@ FlightTestRig_VCore::~FlightTestRig_VCore() {
 
 
 void FlightTestRig_VCore::corePreStep(double p_simT,double p_simDT,double p_mjd) {
+
+
+  if (holdPos) setPos(0, 0, 0, 0, 0);
 
   mjd = p_mjd;
   simT = p_simT;
@@ -160,6 +168,7 @@ void FlightTestRig_VCore::corePreStep(double p_simT,double p_simDT,double p_mjd)
   if (logState == 1) logWrite();
   vAccPrevTgt = vAccTgt;
 
+
   return;
 }
 
@@ -171,16 +180,57 @@ void FlightTestRig_VCore::setPos(double lat, double lon, double alt, double mach
   vs2.flag = 0;
   v->GetStatusEx(&vs2);
 
-  CONST VECTOR3 desired_llad = _V(-74.5, 40.6342, 60000); // KSC @ 60km
-  CONST VECTOR3 desired_ahdd = _V(90, 2000, 0);      // Bearing 135, 3000 m/s, level horizon
+  
 
 
   VECTOR3 desired_rpos = cf.cnv(RPOS, LLAD, desired_llad);
-  VECTOR3 desired_rvel = cf.cnv(RPOS, AHDD, desired_ahdd, RPOS, desired_rpos) - desired_rpos;
+  VECTOR3 desired_rposv = cf.cnv(RPOS, AHDD, desired_ahdd, RPOS, desired_rpos);
+  VECTOR3 desired_rvel = desired_rposv - desired_rpos;
+
+  VECTOR3 desired_gpos = cf.cnv(GPOS, RPOS, desired_rpos);
+  VECTOR3 desired_gposv = cf.cnv(GPOS, RPOS, desired_rposv);
+  VECTOR3 desired_gvel = desired_gposv - desired_gpos;
+
+  VECTOR3 xhat, yhat, zhat;
+  zhat = desired_gvel; // want to go in primary Z axis (remember: x right, y up, z forward) 
+  normalise(zhat);
+  yhat = desired_rpos; // initially use z and the radial to find x
+  normalise(yhat);
+  xhat = crossp(yhat, zhat); // x orthogonal to z and radial
+  normalise(xhat);
+  yhat = crossp(zhat, xhat); // now fix up y to be orthogonal to x and z
+  normalise(yhat);
+  double gamma = atan2(xhat.y, xhat.x);
+  MATRIX3 M3 = _M(cos(gamma), sin(gamma), 0.0, -sin(gamma), cos(gamma), 0.0, 0.0, 0.0, 1.0);
+  xhat = mul(M3, xhat);
+  yhat = mul(M3, yhat);
+  zhat = mul(M3, zhat);
+  double beta = atan2(zhat.x, zhat.z);
+  MATRIX3 M2 = _M(cos(beta), 0.0, -sin(beta),  0.0, 1.0, 0.0,  sin(beta), 0.0, cos(beta));
+  xhat = mul(M2, xhat);
+  yhat = mul(M2, yhat);
+  zhat = mul(M2, zhat);
+  double alpha = atan2(-zhat.y, zhat.z);
+  MATRIX3 M1 = _M(1.0, 0.0, 0.0,  0.0, cos(alpha), sin(alpha), 0.0, -sin(alpha), cos(alpha));
+  xhat = mul(M1, xhat);
+  yhat = mul(M1, yhat);
+  zhat = mul(M1, zhat);
+
+
+
+
+
+
+
+  rot_act = vs2.arot;
+  rot_test = _V(alpha, beta, gamma);
 
   vs2.rpos = desired_rpos;
   vs2.rvel = desired_rvel;
   vs2.vrot = _V(0.0, 0.0, 0.0);
+  vs2.flag = 0;
+  vs2.status = 0;
+  //vs2.arot = rot_test;
   v->DefSetStateEx(&vs2);
   return;
 }

@@ -36,6 +36,8 @@ public:
 
   // Button Press Handlers
   void Button_POS();
+  void Button_HLD();
+  void Button_ROT();
 
 
   // Persistence functions

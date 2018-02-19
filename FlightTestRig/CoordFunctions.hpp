@@ -32,7 +32,7 @@
 
 #ifndef _COORD_FUNCTIONS_H
 #define _COORD_FUNCTIONS_H
-enum cf_type {LLAD = 0, LLA = 1, LLR = 2, RPOS = 10, ECEF = 20, NED = 30, AHD = 31, AHDD = 32};
+enum cf_type {LLAD = 0, LLA = 1, LLR = 2, GPOS = 10, RPOS = 11, ECEF = 20, NED = 30, AHD = 31, AHDD = 32};
 
 class CoordFunctions {
 public:
@@ -40,8 +40,10 @@ public:
   VECTOR3 cnv(const cf_type etype, const cf_type stype, ...);
 
 private:
+  VECTOR3 gpos_to_rpos(const VECTOR3 &gpos);
   VECTOR3 rpos_to_ecef(const VECTOR3 &rpos);
   VECTOR3 ecef_to_rpos(const VECTOR3 &ecef);
+  VECTOR3 rpos_to_gpos(const VECTOR3 &rpos);
   VECTOR3 ecef_to_llr(const VECTOR3 &ecef);
   VECTOR3 llr_to_ecef(const VECTOR3 &llr);
   VECTOR3 llr_to_lla(const VECTOR3 &llr);

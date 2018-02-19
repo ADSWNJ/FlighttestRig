@@ -22,6 +22,7 @@
     <ClInclude Include="MFDButtonPage.hpp" />
     <ClInclude Include="MFDPersist.hpp" />
     <ClInclude Include="ParseFunctions.h" />
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CoordFunctions.cpp" />
@@ -37,6 +38,9 @@
     <ClCompile Include="FlightTestRig_VCore.cpp" />
     <ClCompile Include="MFDPersist.cpp" />
     <ClCompile Include="ParseFunctions.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resource.rc" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{DF20037A-8198-4565-AED1-E80F91C462FE}</ProjectGuid>

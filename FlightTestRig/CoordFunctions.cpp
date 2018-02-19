@@ -15,11 +15,12 @@
 #include "CoordFunctions.hpp"
 #include <cstdarg>
 
-// Five coordinate systems are used...
+// Six coordinate systems are used...
 // "llad" means longitude [deg], latitude [deg], altitude [m]... defining our 3D point relative to the planet core as a function of lon and lat angles and the local altitude from the elevation functions
 // "lla" means longitude [rad], latitude [rad], altitude [m] ... defining our 3D point relative to the planet core as a function of lon and lat angles and the local altitude from the elevation functions
 // "llr" means longitude [rad], latitude [rad], radius [m] ... defining our 3D point relative to the planet core as a function of lon and lat angles and a radius from core
-// "rpos" relative position to object, in global frame (ecliptic equinox J2000.0 frame)
+// "gpos" global position, in global frame (ecliptic equinox J2000.0 frame)
+// "rpos" relative position to main gravity source, in global frame (ecliptic equinox J2000.0 frame)
 // "ecef" means ECEF Cartesian coordinates [m] from the core (X-axis is core to 0-lat 0-lon, Y-axis is core to 0-lat 90E-lon, Z-axis is North Pole 90N)
 //
 // Three relative vector systems are used...
@@ -76,10 +77,16 @@ VECTOR3 CoordFunctions::cnv(const cf_type etype, const cf_type stype, ...) {
       } else {
         val = llr_to_ecef(val);       cur = ECEF;  break;
       }
+    case GPOS:
+        val = gpos_to_rpos(val);      cur = RPOS; break;
     case RPOS:
+      if (etype == GPOS) {
+        val = rpos_to_gpos(val);      cur = GPOS; break;
+      } else {
         val = rpos_to_ecef(val);      cur = ECEF; break;
+      }
     case ECEF:
-      if (etype == RPOS) {
+      if (etype == GPOS || etype == RPOS) {
         val = ecef_to_rpos(val);      cur = RPOS; break;
       } else if (etype < cur) {
         val = ecef_to_llr(val);       cur = LLR;  break;
@@ -114,6 +121,31 @@ VECTOR3 CoordFunctions::cnv(const cf_type etype, const cf_type stype, ...) {
   return val;
 }
 
+/*
+ * \brief Converts GPOS to RPOS
+ * \param gpos Global coordinates
+ * \return rpos  planet-relative position (global frame)
+ */
+VECTOR3 CoordFunctions::gpos_to_rpos(const VECTOR3 &gpos) {
+  OBJHANDLE pH = v->GetGravityRef();
+  VECTOR3 ppos, rpos;
+  oapiGetGlobalPos(pH, &ppos);
+  rpos = gpos - ppos;
+  return rpos;
+}
+
+/*
+ * \brief Converts RPOS to GPOS
+ * \param rpos  planet-relative position (global frame)
+ * \return gpos Global coordinates
+ */
+VECTOR3 CoordFunctions::rpos_to_gpos(const VECTOR3 &rpos) {
+  OBJHANDLE pH = v->GetGravityRef();
+  VECTOR3 ppos, gpos;
+  oapiGetGlobalPos(pH, &ppos);
+  gpos = rpos + ppos;
+  return gpos;
+}
 
 /*
  * \brief Converts RPOS to ECEF

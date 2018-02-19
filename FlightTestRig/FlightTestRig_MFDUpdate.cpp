@@ -24,7 +24,16 @@ bool FlightTestRig::Update(oapi::Sketchpad *skp)
   skpTitle("FlightTestRig MFD");
   int l = 3;
 
-  skpFormatText(2, l, "   Act");
+  skpFormatText(2, l, "A %5.2f", VC->rot_act.x);
+  skpFormatText(4, l++, "%5.2f", VC->rot_act.x * DEG);
+  skpFormatText(2, l, "B %5.2f", VC->rot_act.y );
+  skpFormatText(4, l++, "%5.2f", VC->rot_act.y * DEG);
+  skpFormatText(2, l, "G %5.2f", VC->rot_act.z);
+  skpFormatText(4, l++, "%5.2f", VC->rot_act.z * DEG);
+  skpFormatText(2, l++, "HoldPos: %c", (VC->holdPos? 'T' : 'F'));
+  skpFormatText(2, l++, "HoldPosCnt: %d", VC->holdPosCnt);
+
+/*  skpFormatText(2, l, "   Act");
   skpFormatText(4, l, "   Tgt");
   l++;
   skpFormatText(0, l, "DP:");
@@ -151,6 +160,6 @@ bool FlightTestRig::Update(oapi::Sketchpad *skp)
     skpFormatText(0, l++, "Warp: MAX 1.0 on AUTO VACC AP");
   }
   skpColor(CLR_WHITE);
+*/
   return true;
-
 };

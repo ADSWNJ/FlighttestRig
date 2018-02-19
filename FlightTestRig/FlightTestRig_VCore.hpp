@@ -42,6 +42,13 @@ class FlightTestRig_VCore {
     VESSEL *v;
     int vix; // Vessel index in LU
     char clName[128];
+    bool holdPos;
+    int holdPosCnt;
+    VECTOR3 ArotD, ArotR; 
+    VECTOR3 desired_llad;
+    VECTOR3 desired_ahdd;
+    VECTOR3 rot_test;
+    VECTOR3 rot_act;
 
     // Vessel Coordinate transforms
     CoordFunctions cf; 
